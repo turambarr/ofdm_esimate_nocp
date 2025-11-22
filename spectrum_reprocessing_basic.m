@@ -60,8 +60,9 @@ axis_idx = (0:M-1).';
 
 if opts.PlotFigure
     figure('Name', char(opts.FigureTitle));
-    plot(axis_idx, R_basic, 'LineWidth', 1.2); grid on;
-    xlabel('索引 k (对应虚拟延迟)'); ylabel('|G(k)|^2 (归一化)');
+    R_plot = 10*log10(R_basic + eps);
+    plot(axis_idx, R_plot, 'LineWidth', 1.2); grid on;
+    xlabel('索引 k (对应虚拟延迟)'); ylabel('|G(k)|^2 (dB)');
     title(opts.FigureTitle + " - OFDM隐周期可视化");
 end
 end

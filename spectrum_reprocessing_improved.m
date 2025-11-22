@@ -104,15 +104,15 @@ if opts.PlotFigure
     tiledlayout(numel(alphas) + (~isempty(instAmpSpectrum)), 1, 'TileSpacing','compact');
     for k = 1:numel(alphas)
         nexttile;
-        plot(axis_idx, rootSpectra{k}, 'LineWidth', 1.2); grid on;
+        plot(axis_idx, 10*log10(rootSpectra{k} + eps), 'LineWidth', 1.2); grid on;
         title(sprintf('取根演化方案 (\alpha = %.2f)', alphas(k)));
-        xlabel('索引'); ylabel('归一化功率');
+        xlabel('索引'); ylabel('功率 (dB)');
     end
     if ~isempty(instAmpSpectrum)
         nexttile;
-        plot(axis_idx, instAmpSpectrum, 'LineWidth', 1.2); grid on;
+        plot(axis_idx, 10*log10(instAmpSpectrum + eps), 'LineWidth', 1.2); grid on;
         title('解析信号瞬时幅度谱再处理');
-        xlabel('索引'); ylabel('归一化功率');
+        xlabel('索引'); ylabel('功率 (dB)');
     end
     sgtitle(opts.FigureTitle);
 end

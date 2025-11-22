@@ -124,9 +124,11 @@ if cfg.plotFigures
     legend('P_{xx}', 'f_L','f_H');
 
     subplot(3,1,2);
-    h_basic = plot(axis_basic, R_basic, 'Color',[0.6 0.6 0.6]); hold on; grid on;
-    h_selected = plot(R_use, 'b', 'LineWidth', 1.1);
-    xlabel('索引 k'); ylabel('|G(k)|^2 (归一化)');
+    R_basic_db = 10*log10(R_basic + eps);
+    R_use_db = 10*log10(R_use + eps);
+    h_basic = plot(axis_basic, R_basic_db, 'Color',[0.6 0.6 0.6]); hold on; grid on;
+    h_selected = plot(R_use_db, 'b', 'LineWidth', 1.1);
+    xlabel('索引 k'); ylabel('|G(k)|^2 (dB)');
     title(['功率谱再处理对比 - ' reprocessDesc]);
     if numel(h_basic) > 1, h_basic = h_basic(1); end
     if numel(h_selected) > 1, h_selected = h_selected(1); end
