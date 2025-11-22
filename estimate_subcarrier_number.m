@@ -1,25 +1,38 @@
-function [N_est, delta_f] = estimate_subcarrier_number(bandwidth, fs, M)
-% estimate_subcarrier_number  根据带宽和周期估计OFDM子载波数
+function [N_hat, info] = estimate_subcarrier_number(B_hat, delta_f_hat, varargin)
+% estimate_subcarrier_number  根据信号带宽与子载波间隔估计子载波数
 %
-%   [N_est, delta_f] = estimate_subcarrier_number(bandwidth, fs, M)
+%   [N_hat, info] = estimate_subcarrier_number(B_hat, delta_f_hat, Name, Value)
 %
 % 输入参数:
-%   bandwidth - 估计的信号带宽 (Hz)。
-%   fs        - 采样频率 (Hz)。
-%   M         - “谱再处理”序列的周期，以样本点数表示。
+%   B_hat       - 估计的信号带宽 (Hz)。
+%   delta_f_hat - 估计的子载波间隔 (Hz)。
+%
+% Name-Value参数:
+%   'GuardSubcarriers' - 保护或空载波数量，默认2。
 %
 % 输出参数:
-%   N_est     - 估计的子载波数，四舍五入取整。
-%   delta_f   - 估计的子载波间隔 (Hz)。
+%   N_hat - 估计的子载波数，四舍五入取整。
+%   info  - 中间信息结构体。
 %
-% 根据文献公式，谱再处理序列的主周期M对应的频率间隔为采样频率除以M，
-% 即子载波间隔 delta_f = fs / M。信号带宽约等于子载波数乘以子载波间隔，
-% 因此子载波数估计为带宽除以间隔，并取最近整数。
+% 理论说明:
+%   理想OFDM信号满足 B \approx N * Δf。盲估计场景下使用 round(B/Δf)
+%   能在均方意义下最小化误差；引入 GuardSubcarriers 以扣除边缘保留的
+%   空子载波，可减少对侧瓣/多径的敏感度。
 
-% 计算子载波间隔
-delta_f = fs / M;
+validateattributes(B_hat, {'double','single'}, {'scalar','nonnegative'}, mfilename, 'B_hat');
+validateattributes(delta_f_hat, {'double','single'}, {'scalar','positive'}, mfilename, 'delta_f_hat');
 
-% 估计子载波数并取整
-N_est = round(bandwidth / delta_f);
+p = inputParser;
+p.addParameter('GuardSubcarriers', 2, @(v) isnumeric(v) && isscalar(v) && v >= 0);
+p.parse(varargin{:});
+opts = p.Results;
+
+continuous_est = B_hat / delta_f_hat;
+adjusted_est = max(continuous_est - opts.GuardSubcarriers, 1);
+N_hat = max(1, round(adjusted_est));
+
+info = struct('continuous', continuous_est, ...
+              'adjusted', adjusted_est, ...
+              'guard', opts.GuardSubcarriers);
 
 end
