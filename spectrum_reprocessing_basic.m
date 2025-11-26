@@ -36,6 +36,15 @@ opts = p.Results;
 
 N = numel(Pxx);
 M = 2^nextpow2(N * opts.ZeroPadFactor);
+
+% 在执行FFT和平方之前先进行幅度归一化，以避免数值下溢
+if opts.Normalize
+    maxP = max(Pxx);
+    if maxP > 0
+        Pxx = Pxx ./ maxP;
+    end
+end
+
 if opts.RemoveMean
     proc = Pxx - mean(Pxx);
 else

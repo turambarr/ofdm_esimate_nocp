@@ -5,7 +5,7 @@
 cfg = struct();
 
 %% 数据与限长配置
-cfg.dataFile = 'starlink_ku_band_signal_480MHz.dat';       % 交错IQ文件 (int16 或 float32)
+cfg.dataFile = 'starlink_ku_band_signal_int16.dat';       % 交错IQ文件 (int16 或 float32)
 cfg.fs = 480e6;                    % 采样率 Hz
 cfg.maxSamples = 0;            % 0 表示读取完整文件
 
