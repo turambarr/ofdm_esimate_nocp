@@ -5,7 +5,7 @@
 cfg = struct();
 
 %% 数据与限长配置
-cfg.dataFile = 'starlink_ku_band_signal_int16.dat';       % 交错IQ文件 (int16 或 float32)
+cfg.dataFile = 'starlink_ku_band_signal_480MHz.dat';       % 交错IQ文件 (int16 或 float32)
 cfg.fs = 480e6;                    % 采样率 Hz
 cfg.maxSamples = 0;            % 0 表示读取完整文件
 
@@ -19,6 +19,9 @@ cfg.useImprovedReprocess = true;  % 启用平方根/瞬时幅度改进版
 cfg.alphaIndex = 1;               % 改进版可用多个 α 结果, 1=默认
 cfg.zeroPadFactor = 2;            % 基本版功率谱再处理的零填充倍率
 cfg.suppressZeroLagPeak = true;   % 是否抑制再处理结果的零延迟巨大峰值
+cfg.cropForReprocess = true;      % 仅对估计带宽附近频段做改进再处理
+cfg.cropMarginFraction = 0;     % 相对带宽的左右保护带比例 (0~0.5)
+cfg.cropInnerFraction = 0.8;      % 在估计带宽内部仅保留中间80%的主带 (0~1]
 cfg.periodicityThreshold = 2.0;   % 周期性指标阈值
 cfg.minPeakProminence = 0.02;     % 周期检测最小峰值显著度
 cfg.smoothingSpan = 51;           % 周期检测包络平滑窗口长度

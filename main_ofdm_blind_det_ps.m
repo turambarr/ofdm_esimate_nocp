@@ -27,6 +27,9 @@ welchOverlap = cfg.welchOverlap;
 useImprovedReprocess = cfg.useImprovedReprocess;
 alphaIndex = cfg.alphaIndex;
 periodicityThreshold = cfg.periodicityThreshold;
+cropForReprocess = cfg.cropForReprocess;
+cropMarginFraction = cfg.cropMarginFraction;
+cropInnerFraction = cfg.cropInnerFraction;
 
 fprintf('=== 基于功率谱再处理的OFDM盲检测 (文件: %s) ===\n', dataFile);
 
@@ -62,16 +65,49 @@ bandwidthArgs = {'Threshold_dB', cfg.bandwidthThreshold_dB, ...
 if ~isempty(cfg.bandwidthMinWidthHz)
     bandwidthArgs = [bandwidthArgs, {'MinWidthHz', cfg.bandwidthMinWidthHz}];
 end
-[B_hat, f_L, f_H, ~] = estimate_bandwidth_from_psd(Pxx, f_grid, bandwidthArgs{:});
+[B_hat, f_L, f_H, bwInfo] = estimate_bandwidth_from_psd(Pxx, f_grid, bandwidthArgs{:});
 
 %% 4. 功率谱再处理 (基本版 + 可选改进版)
 [R_basic, axis_basic] = spectrum_reprocessing_basic(Pxx, 'ZeroPadFactor', cfg.zeroPadFactor, ...
     'SuppressZeroLag', cfg.suppressZeroLagPeak, ...
     'FigureTitle', dataFile + " - 基本功率谱再处理", 'PlotFigure', cfg.plotFigures);
 
+% 根据估计带宽构造仅在主带非零的功率谱，用于改进再处理
+Pxx_for_reprocess = Pxx;
+if cropForReprocess
+    idxL = bwInfo.index_L_energy;
+    idxH = bwInfo.index_H_energy;
+    if isnan(idxL) || isnan(idxH)
+        idxL = bwInfo.index_L_threshold;
+        idxH = bwInfo.index_H_threshold;
+    end
+    if ~isnan(idxL) && ~isnan(idxH) && idxH > idxL
+        Npsd = numel(Pxx);
+        span = idxH - idxL + 1;
+        margin = max(0, min(floor(span * cropMarginFraction), floor((Npsd-1)/2)));
+        idxL2 = max(1, idxL - margin);
+        idxH2 = min(Npsd, idxH + margin);
+
+        % 在估计带宽内部只保留中间 cropInnerFraction 部分
+        frac = max(0, min(1, cropInnerFraction));
+        innerSpan = idxH2 - idxL2 + 1;
+        if frac > 0 && frac < 1 && innerSpan > 2
+            keepSpan = max(1, floor(innerSpan * frac));
+            centerIdx = floor((idxL2 + idxH2)/2);
+            halfKeep = floor(keepSpan/2);
+            idxL2 = max(1, centerIdx - halfKeep);
+            idxH2 = min(Npsd, idxL2 + keepSpan - 1);
+        end
+        mask = false(size(Pxx));
+        mask(idxL2:idxH2) = true;
+        Pxx_for_reprocess = zeros(size(Pxx));
+        Pxx_for_reprocess(mask) = Pxx(mask);
+    end
+end
+
 R_use = R_basic;
 if useImprovedReprocess
-    R_imp = spectrum_reprocessing_improved(Pxx, 'TimeSignal', rx_signal, 'Fs', fs, ...
+    R_imp = spectrum_reprocessing_improved(Pxx_for_reprocess, 'TimeSignal', rx_signal, 'Fs', fs, ...
         'FigureTitle', dataFile + " - 改进功率谱再处理", 'PlotFigure', cfg.plotFigures);
     if ~isempty(R_imp.root)
         alphaIdx = min(alphaIndex, numel(R_imp.root));
@@ -142,6 +178,18 @@ if cfg.plotFigures
     xlabel('索引'); ylabel('平滑包络');
     title(sprintf('周期检测: M_B=%.1f, Δf=%.3f kHz, 指标=%.2f', ...
         period_idx, delta_f_hat/1e3, detInfo.periodicityMetric));
+
+    % 额外展示"两端置零"前后的功率谱对比
+    figure('Name','裁剪与置零前后PSD对比');
+    subplot(2,1,1);
+    plot(f_grid/1e6, 10*log10(Pxx + eps), 'LineWidth', 1.1); grid on;
+    xlabel('频率 (MHz)'); ylabel('PSD (dB/Hz)');
+    title('原始 Welch 功率谱 Pxx');
+
+    subplot(2,1,2);
+    plot(f_grid/1e6, 10*log10(Pxx_for_reprocess + eps), 'LineWidth', 1.1); grid on;
+    xlabel('频率 (MHz)'); ylabel('PSD (dB/Hz)');
+    title('仅主带保留、两端置零后的 Pxx_{crop}');
 end
 
 fprintf('\n完成。如需分析其他文件，请在 run.m 中修改 cfg。\n');
