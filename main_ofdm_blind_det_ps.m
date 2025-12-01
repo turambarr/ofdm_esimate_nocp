@@ -100,8 +100,23 @@ if cropForReprocess
         end
         mask = false(size(Pxx));
         mask(idxL2:idxH2) = true;
+
+        % 在主带内部做去直流 + 去斜率 + 加窗, 以压制两端异常抬高
+        P_main = Pxx(idxL2:idxH2);
+        N_main = numel(P_main);
+        x = (0:N_main-1)'/(max(N_main-1,1));
+        Xmat = [ones(N_main,1), x];
+        beta = Xmat \ P_main;              % 最小二乘拟合直线
+        trend = Xmat * beta;               % 估计噪声趋势
+        P_detrend = P_main - trend;        % 去掉缓慢斜率
+        P_detrend = max(P_detrend, 0);     % 保证非负
+
+        % 端点加汉宁窗, 平滑抑制主带两端
+        w = hann(N_main);
+        P_windowed = P_detrend .* w;
+
         Pxx_for_reprocess = zeros(size(Pxx));
-        Pxx_for_reprocess(mask) = Pxx(mask);
+        Pxx_for_reprocess(idxL2:idxH2) = P_windowed;
     end
 end
 
